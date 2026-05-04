@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Movie Recommender System</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="app-body">
+<div id="app">
+    <template v-if="isLoading">
+        <section class="hero is-fullheight is-transparent">
+            <div class="hero-body">
+                <div class="container has-text-centered">
+                    <p class="title loading-title">Loading...</p>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <template v-else>
+        <!-- Top Navigation -->
+        <header class="top-shell">
+            <div class="container is-max-widescreen">
+                <nav class="main-nav">
+                    <div class="nav-left">
+                        <a href="/" class="nav-home-link">
+                            <span class="site-title">Movie Recommender</span>
+                        </a>
+                    </div>
+
+                    <!-- Center: Search bar -->
+                    <div class="nav-center">
+                        <div class="search-wrapper" @click.stop>
+                            <span class="search-icon fa fa-search"></span>
+                            <input
+                                type="text"
+                                class="search-input"
+                                placeholder="Search movies..."
+                                v-model="searchQuery"
+                                @input="onSearchInput"
+                            >
+                            <!-- Clear button (optional) -->
+                            <button
+                                v-if="searchQuery"
+                                class="search-clear-btn"
+                                type="button"
+                                @click="clearSearch"
+                            >
+                                <span class="fa fa-times"></span>
+                            </button>
+
+                            <!-- Results dropdown -->
+                            <div
+                                v-if="searchResultMovies.length > 0"
+                                class="search-dropdown"
+                            >
+                                <div class="search-dropdown-inner">
+                                    <button
+                                        class="search-result-item"
+                                        v-for="movie in searchResultMovies"
+                                        :key="movie.movieId"
+                                        type="button"
+                                        @mousedown.prevent="goToMovie(movie.movieId)"
+                                    >
+                                        <img
+                                            class="search-cover"
+                                            :src="movie.cover_url"
+                                            onerror="this.src='https://placehold.co/40x60?text=No+Cover';"
+                                            alt=""
+                                        >
+                                        <div class="search-meta">
+                                            <p class="search-title">
+                                                [[ movie.title ]]
+                                            </p>
+                                            <p class="search-sub">
+                                                [[ movie.release_date || movie.year ]]
+                                            </p>
+                                        </div>
+                                        <span class="fa fa-angle-right search-arrow"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Link to rated items -->
+                    <a href="/rated" class="nav-link">
+                        <i class="fa fa-star mr-1"></i>
+                        My rated items
+                    </a>
+
+                    <!-- Right side: filters & actions -->
+                    <div class="nav-right">
+                        <!-- Genre Filtering Dropdown -->
+                        <div class="dropdown genre-dropdown">
+                            <button class="dropdown-btn" id="filterBtn" @click.stop="toggleDropdown">
+                                <span class="mr-1">
+                                    <i class="fa fa-filter"></i>
+                                </span>
+                                Genres
+                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div id="genreDropdown" :class="['dropdown-content', isDropdownOpen ? 'show' : '']" @click.stop>
+                                <div class="dropdown-header">
+                                    <h3 class="dropdown-title">Filter by Genre</h3>
+                                    <div class="dropdown-actions">
+                                        <button @click="selectAll">Select all</button>
+                                        <button @click="clearAll">Clear</button>
+                                    </div>
+                                </div>
+
+                                <div class="genre-grid" style="max-height: 300px; overflow-y: auto;">
+                                    <label class="genre-pill" v-for="genre in allGenres" :key="genre.id">
+                                        <input type="checkbox" class="genre-checkbox" :value="genre.id.toString()" v-model="genres">
+                                        <span class="custom-checkbox"></span>
+                                        [[ genre.name ]]
+                                    </label>
+                                </div>
+
+                                <div class="dropdown-footer">
+                                    <button class="button is-link is-small px-6" @click="applyFilter">
+                                        Apply
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Clear all history -->
+                        <button class="button button-ghost ml-3" @click="cleanAll">
+                            <span class="icon is-small mr-1">
+                                <i class="fa fa-trash-o"></i>
+                            </span>
+                            <span>Clear history</span>
+                        </button>
+                    </div>
+                </nav>
+            </div>
+        </header>
+
+        <main>
+            <template v-if="genres.length > 0 && userRates.length > 0">
+                {% if recommendations %}
+                <section class="section pt-5 pb-2 section-block">
+                    <div class="container is-max-widescreen">
+                        <div class="section-header">
+                            <div>
+                                <p class="section-title">
+                                    Recommended for you
+                                </p>
+                                <p class="section-subtitle">{{ recommendations_message }}</p>
+                            </div>
+                        </div>
+
+                        <div class="columns is-mobile is-multiline">
+                            {% for movie in recommendations %}
+                            <div class="column is-3-fullhd is-3-desktop is-4-tablet is-6-mobile">
+                                <div class="card movie-card">
+                                    <div class="card-image">
+                                        <figure class="image is-4by3">
+                                            <img src="{{ movie['cover_url'] }}"
+                                                 onerror="this.src='https://placehold.co/480x640?text=No+Cover';"
+                                                 alt="">
+                                        </figure>
+                                    </div>
+                                    <div class="card-content p-3">
+                                        <div class="media">
+                                            <div class="media-content">
+                                                <p class="movie-title-text">
+                                                    {{ movie['title'] }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <!-- Recommendation reason -->
+                                        <p class="movie-reason">
+                                            💡 {{ movie['reason'] if movie['reason'] else 'Recommended for you' }}
+                                        </p>
+                                    </div>
+
+                                    <div class="card-footer movie-card-footer">
+                                        <a href="/movie/{{ movie['movieId'] }}" class="button button-primary is-small">
+                                            <span class="fa fa-info-circle mr-1"></span> Details
+                                        </a>
+                                        <!-- Like button -->
+                                        <button
+                                            class="button button-like is-small"
+                                            :class="{'is-liked': inLikes({{movie['movieId']}})}"
+                                            @click="updateLike({{movie['movieId']}})"
+                                        >
+                                            <span :class="['fa fa-thumbs-up', inLikes({{movie['movieId']}}) ? 'is-liked-icon' : '']">
+                                                Like
+                                            </span>
+                                        </button>
+                                        <!-- Dislike button -->
+                                        <button
+                                            class="button button-dislike is-small btn-dislike-movie"
+                                            onclick="giveDislike({{movie['movieId'] }}, event)"
+                                        >
+                                            <span class="fa fa-thumbs-down"></span> Dislike
+                                        </button>
+                                    </div>
+                                    <!-- Feedback confirmation -->
+                                    <div id="confirm-{{ movie['movieId'] }}" class="feedback-confirm" style="display:none;">
+                                        ✓ Feedback saved — next recommendations will improve!
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+                {% endif %}
+
+                {% if likes_similars %}
+                <section class="section pt-4 pb-2 section-block">
+                    <div class="container is-max-widescreen">
+                        <div class="section-header">
+                            <div>
+                                <p class="section-title">
+                                    Because you liked these
+                                </p>
+                                <p class="section-subtitle">{{ likes_similar_message }}</p>
+                            </div>
+                        </div>
+
+                        <div class="columns is-mobile is-multiline">
+                            {% for movie in likes_similars %}
+                            <div class="column is-2-fullhd is-2-desktop is-3-tablet is-6-mobile">
+                                <div class="card movie-card">
+                                    <div class="card-image">
+                                        <figure class="image is-3by4">
+                                            <img src="{{ movie['cover_url'] }}"
+                                                 onerror="this.src='https://placehold.co/480x640?text=No+Cover';"
+                                                 alt="">
+                                        </figure>
+                                    </div>
+                                    <div class="card-content p-3">
+                                        <div class="media">
+                                            <div class="media-content">
+                                                <p class="movie-title-text">
+                                                    {{ movie['title'] }}
+                                                </p>
+                                                <p class="movie-meta-text">
+                                                    {{ movie['release_date'] }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="card-footer movie-card-footer">
+                                        <a href="/movie/{{ movie['movieId'] }}" class="button button-primary is-small">
+                                            <span class="fa fa-info-circle mr-1"></span> Details
+                                        </a>
+                                        <button
+                                            class="button button-like is-small"
+                                            :class="{'is-liked': inLikes({{movie['movieId']}})}"
+                                            @click="updateLike({{movie['movieId']}})"
+                                        >
+                                            <span :class="['fa fa-thumbs-up', inLikes({{movie['movieId']}}) ? 'is-liked-icon' : '']">
+                                                Like
+                                            </span>
+                                        </button>
+
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+                {% endif %}
+
+                {% if likes %}
+                <section class="section pt-4 pb-4 section-block">
+                    <div class="container is-max-widescreen">
+                        <div class="section-header section-header-inline">
+                            <p class="section-title mb-0">
+                                Your liked movies
+                            </p>
+                            <button class="button button-outline is-small" @click="reloadPage">
+                                <i class="fa fa-refresh mr-2" aria-hidden="true"></i>Refresh
+                            </button>
+                        </div>
+
+                        <div class="columns is-mobile pb-3 like-row">
+                            {% for movie in likes %}
+                            <div class="column is-2-fullhd is-2-desktop is-3-tablet is-6-mobile">
+                                <div class="card movie-card">
+                                    <div class="card-image">
+                                        <figure class="image is-3by4">
+                                            <img src="{{ movie['cover_url'] }}"
+                                                 onerror="this.src='https://placehold.co/480x640?text=No+Cover';"
+                                                 alt="">
+                                        </figure>
+                                    </div>
+                                    <div class="card-content p-3">
+                                        <div class="media">
+                                            <div class="media-content">
+                                                <p class="movie-title-text">
+                                                    {{ movie['title'] }}
+                                                </p>
+                                                <p class="movie-meta-text">
+                                                    {{ movie['release_date'] }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="card-footer movie-card-footer">
+                                        <a href="/movie/{{ movie['movieId'] }}" class="button button-primary is-small">
+                                            <span class="fa fa-info-circle mr-1"></span> Details
+                                        </a>
+                                        <button
+                                            class="button button-like is-small"
+                                            :class="{'is-liked': inLikes({{movie['movieId']}})}"
+                                            @click="updateLike({{movie['movieId']}})"
+                                        >
+                                            <span :class="['fa fa-thumbs-up', inLikes({{movie['movieId']}}) ? 'is-liked-icon' : '']">
+                                                Like
+                                            </span>
+                                        </button>
+
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+                {% endif %}
+            </template>
+
+            <!-- Genre selection modal (first step) -->
+            <div :class="['modal', showGenres ? 'is-active' : '']">
+                <div class="modal-background"></div>
+                <div class="modal-card">
+                    <header class="modal-card-head">
+                        <p class="modal-card-title">Choose the genres you like</p>
+                    </header>
+                    <div class="modal-card-body">
+                        <p class="mb-4 subtitle-text">Select one or more genres to personalize your recommendations.</p>
+                        <div class="genre-button-grid">
+                            <button v-for="genre in allGenres" :key="genre.id"
+                                    :class="['button genre-select-button', inGenres(genre.id) ? 'is-active-genre' : '' ]"
+                                    :value="genre.id"
+                                    @click="updateGenre(genre.id)">
+                                [[ genre.name ]]
+                            </button>
+                        </div>
+                    </div>
+                    <footer class="modal-card-foot">
+                        <button class="button button-primary" :disabled="genres.length == 0" @click="saveGenres">
+                            Save & continue
+                        </button>
+                    </footer>
+                </div>
+            </div>
+
+            <!-- Rating modal (second step) -->
+            <div :class="['modal', showMovieRate ? 'is-active' : '']">
+                <div class="modal-background"></div>
+                <div class="modal-card rating-modal">
+                    <header class="modal-card-head">
+                        <p class="modal-card-title">Rate some movies to get started</p>
+                    </header>
+                    <div class="modal-card-body">
+                        <p class="mb-3 subtitle-text">
+                            Please rate at least 5 movies so we can learn your taste.
+                        </p>
+                        <div class="columns is-mobile is-multiline">
+                            <div class="column is-3-fullhd is-3-desktop is-4-tablet is-6-mobile"
+                                 v-for="movie in seedMovies" :key="movie.movieId">
+                                <div class="card movie-card">
+                                    <div class="card-image">
+                                        <figure class="image is-3by4">
+                                            <img :src="movie.cover_url"
+                                                 onerror="this.src='https://placehold.co/480x640?text=No+Cover';" alt="">
+                                        </figure>
+                                    </div>
+                                    <div class="card-content p-3">
+                                        <div class="media">
+                                            <div class="media-content">
+                                                <p class="movie-title-text">
+                                                    [[ movie.title ]]
+                                                </p>
+                                                <p class="movie-meta-text">
+                                                    [[ movie.release_date || movie.year ]]
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="card-footer rating-footer">
+                                        <div class="rating-stars">
+                                            <template v-for="rate in [1, 2, 3, 4, 5]">
+                                                <span :class="['fa fa-star px-1 star', getRate(movie.movieId)[1] >= rate ? 'checked': '']"
+                                                      @click="updateRate(movie.movieId, rate)"></span>
+                                            </template>
+                                        </div>
+                                        <button class="button is-small not-watched-btn"
+                                                :class="{'is-not-watched': isNotWatched(movie.movieId)}"
+                                                @click="markNotWatched(movie.movieId)">
+                                            <span class="fa fa-eye-slash"></span>&nbsp;Not watched
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <footer class="modal-card-foot rating-modal-footer">
+                        <span class="mr-3 ratings-counter">
+                            Valid ratings: [[ validRateCount ]] / 10 (min. 5)
+                        </span>
+                        <button class="button button-outline" @click="refreshSeedMovies" :disabled="isRefreshing">
+                            <span class="fa fa-refresh"></span>&nbsp;Refresh movies
+                        </button>
+                        <button class="button button-primary"
+                                :disabled="validRateCount < 5"
+                                @click="showMovieRate = false; reloadPage()">
+                            Save & show recommendations
+                        </button>
+                    </footer>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer app-footer mt-6">
+            <div class="container is-max-widescreen">
+                <div class="content has-text-centered">
+                    <p class="footer-text">
+                        COMP4135 Group Project © 2026
+                    </p>
+                    
+                </div>
+            </div>
+        </footer>
+    </template>
+</div>
+
+<script type="module">
+    import {createApp, onMounted, ref, computed} from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js'
+
+    const initialGenres = {{ user_genres | tojson }} || [];
+    const initialRates = {{ user_rates | tojson }} || [];
+    const initialLikes = {{ user_likes | tojson }} || [];
+    const initialSeedMovies = {{ default_genres_movies | tojson }} || [];
+    const allGenresData = {{ genres | tojson }} || []; // Load all genres from Flask
+
+    let app = createApp({
+        setup() {
+            const isLoading = ref(true)
+            const isActivityNavBar = ref(false)
+
+            const allGenres = ref(allGenresData)
+            const genres = ref(initialGenres)
+            const userRates = ref(initialRates)
+            const userLikes = ref(initialLikes)
+            const seedMovies = ref(initialSeedMovies)
+
+            const showGenres = ref(false)
+            const showMovieRate = ref(false)
+
+            const isDropdownOpen = ref(false)
+
+            // ==== Search state ====
+            const searchQuery = ref('')
+            const searchResultMovies = ref([])
+            let searchTimer = null
+
+            async function onSearchInput() {
+                clearTimeout(searchTimer)
+                searchTimer = setTimeout(async () => {
+                    const q = searchQuery.value.trim()
+                    if (q.length === 0) {
+                        searchResultMovies.value = []
+                        return
+                    }
+                    try {
+                        const resp = await fetch(`/api/search_movies?q=${encodeURIComponent(q)}`)
+                        if (resp.ok) {
+                            searchResultMovies.value = await resp.json()
+                        } else {
+                            searchResultMovies.value = []
+                        }
+                    } catch (e) {
+                        console.error('Search failed:', e)
+                        searchResultMovies.value = []
+                    }
+                }, 300)
+            }
+
+            function selectMovie(movie) {
+                // 添加电影到评分（初始0分）
+                updateRate(movie.movieId, 0)
+                searchQuery.value = ''
+                searchResultMovies.value = []
+                alert(`"${movie.title}" added. You can rate it now.`)
+            }
+
+            
+            onMounted(() => {
+                isLoading.value = false
+
+                showGenres.value = genres.value.length === 0
+                showMovieRate.value = (genres.value.length > 0 && userRates.value.length === 0)
+
+                window.addEventListener('click', () => {
+                    isDropdownOpen.value = false;
+                });
+            })
+
+            function cleanAll() {
+                if (confirm("Are you sure to delete all records?")) {
+                    document.cookie = "user_genres=; Max-Age=0";
+                    document.cookie = "user_rates=; Max-Age=0";
+                    document.cookie = "user_likes=; Max-Age=0";
+                    reloadPage()
+                }
+            }
+
+            // ==== Genre Operation ====
+
+            function toggleDropdown() {
+                isDropdownOpen.value = !isDropdownOpen.value;
+            }
+
+            function selectAll() {
+                genres.value = allGenres.value.map(g => g.id.toString());
+            }
+
+            function clearAll() {
+                genres.value = [];
+            }
+
+            function updateGenre(_id) {
+                let id = _id.toString()
+                const index = genres.value.indexOf(id);
+                if (index > -1) {
+                    genres.value.splice(index, 1);
+                } else {
+                    genres.value.push(id);
+                    genres.value = genres.value.sort(function (a, b) {
+                        return a - b;
+                    });
+                }
+            }
+
+            function inGenres(id) {
+                return genres.value.includes(id.toString())
+            }
+
+            function saveGenres() {
+                document.cookie = "user_genres=" + encodeURIComponent(genres.value.join(','));
+                document.cookie = "user_rates=; Max-Age=0";
+                reloadPage()
+            }
+
+            // New apply filter function for the dropdown
+            function applyFilter() {
+                document.cookie = "user_genres=" + encodeURIComponent(genres.value.join(','));
+                isDropdownOpen.value = false;
+                reloadPage(); // Reload to fetch new recommendations based on updated genres
+            }
+
+            // ==== Search functions ====
+            function goToMovie(movieId) {
+                window.location.href = `/movie/${movieId}`
+            }
+
+            function clearSearch() {
+                searchQuery.value = ''
+                searchResultMovies.value = []
+            }
+
+            // ==== Movie Rate Operation ====
+
+            function getRate(movieId) {
+                for (let index in userRates.value) {
+                    let record = userRates.value[index].split('|')
+                    if (parseInt(record[1]) === movieId) {
+                        return [index, record[2]]
+                    }
+                }
+
+                return [-1, -1]
+            }
+
+            function updateRate(movieId, rate) {
+                let record = '611' + '|' + movieId + '|' + rate + '|' + '0'
+
+                const index = getRate(movieId)[0];
+                if (index > -1) {
+                    userRates.value[index] = record;
+                } else {
+                    userRates.value.push(record);
+                }
+                document.cookie = "user_rates=" + userRates.value;
+            }
+
+            function isNotWatched(movieId) {
+                return userRates.value.some(record => {
+                    let parts = record.split('|');
+                    return parseInt(parts[1]) === movieId && parseInt(parts[2]) === 0;
+                });
+            }
+
+            function markNotWatched(movieId) {
+                let record = '611|' + movieId + '|0|0';
+                const index = getRate(movieId)[0];
+                if (index > -1) {
+                    userRates.value[index] = record;
+                } else {
+                    userRates.value.push(record);
+                }
+                document.cookie = "user_rates=" + userRates.value;
+                seedMovies.value = seedMovies.value.filter(m => m.movieId !== movieId);
+            }
+
+            const validRateCount = computed(() => {
+                return userRates.value.filter(record => {
+                    let parts = record.split('|');
+                    return parseInt(parts[2]) > 0;
+                }).length;
+            });
+
+            const isRefreshing = ref(false);
+            async function refreshSeedMovies() {
+                isRefreshing.value = true;
+                let excludeIds = seedMovies.value.map(m => m.movieId);
+                for (let r of userRates.value) {
+                    let mid = parseInt(r.split('|')[1]);
+                    if (!excludeIds.includes(mid)) excludeIds.push(mid);
+                }
+
+                try {
+                    let response = await fetch('/api/refresh_seed_movies', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            user_genres: genres.value,
+                            exclude_ids: excludeIds
+                        })
+                    });
+                    if (response.ok) {
+                        let newMovies = await response.json();
+                        if (newMovies.length > 0) {
+                            seedMovies.value = newMovies;
+                        } else {
+                            alert('No more movies for the selected genres. Please modify your genre choices.');
+                        }
+                    } else {
+                        console.error('API error:', response.status);
+                    }
+                } catch(e) {
+                    console.error('Refresh error:', e);
+                } finally {
+                    isRefreshing.value = false;
+                }
+            }
+
+            // ==== Movie Like Operation ====
+
+            function updateLike(_movieId) {
+                let movieId = _movieId.toString()
+                const index = userLikes.value.indexOf(movieId);
+                if (index > -1) {
+                    userLikes.value.splice(index, 1);
+                } else {
+                    userLikes.value.push(movieId);
+                }
+
+                document.cookie = "user_likes=" + userLikes.value.join(',');
+                reloadPage();
+
+                let dislikes = getCookieVal('user_dislikes');
+                let arr = dislikes ? dislikes.split(',') : [];
+                arr = arr.filter(id => id !== movieId);
+                setCookieVal('user_dislikes', arr.join(','), 365);
+            }
+
+            function inLikes(movieId) {
+                return userLikes.value.includes(movieId.toString())
+            }
+
+            function reloadPage() {
+                location.reload();
+            }
+
+            return {
+                isLoading,
+                isActivityNavBar,
+                cleanAll,
+
+                isDropdownOpen,
+                toggleDropdown,
+                selectAll,
+                clearAll,
+                applyFilter,
+
+                allGenres,
+                showGenres,
+                genres,
+                updateGenre,
+                inGenres,
+                saveGenres,
+
+                showMovieRate,
+                seedMovies,
+                userRates,
+                getRate,
+                updateRate,
+
+                isNotWatched,
+                markNotWatched,
+                validRateCount,
+                isRefreshing,
+                refreshSeedMovies,
+
+                userLikes,
+                updateLike,
+                inLikes,
+
+                // search
+                searchQuery,
+                searchResultMovies,
+                onSearchInput,
+                selectMovie,
+                goToMovie,
+                clearSearch,
+
+                reloadPage,
+            }
+        }
+    })
+
+    app.config.compilerOptions.delimiters = ['[[', ']]']
+    app.mount('#app')
+
+    // ====== Dislike feedback ======
+    function getCookieVal(name) {
+        const val = document.cookie.split('; ').find(r => r.startsWith(name + '='));
+        return val ? decodeURIComponent(val.split('=')[1]) : '';
+    }
+    function setCookieVal(name, value, days) {
+        const expires = new Date(Date.now() + days * 864e5).toUTCString();
+        document.cookie = `${name}=${encodeURIComponent(value)};expires=${expires};path=/`;
+    }
+    window.giveDislike = function(movieId, event) {
+        // 儲入 cookie
+        let dislikes = getCookieVal('user_dislikes');
+        let arr = dislikes ? dislikes.split(',') : [];
+        if (!arr.includes(String(movieId))) {
+            arr.push(String(movieId));
+            setCookieVal('user_dislikes', arr.join(','), 365);
+        }
+
+        let likes = getCookieVal('user_likes');
+        let likesArr = likes ? likes.split(',') : [];
+        likesArr = likesArr.filter(id => id !== String(movieId));
+        setCookieVal('user_likes', likesArr.join(','), 365);
+
+        // 灰 card
+        const btn = event.target.closest('.btn-dislike-movie');
+        const card = btn.closest('.movie-card');
+        if (card) card.style.opacity = '0.4';
+
+        // 按鈕變成 Undo
+        if (btn) {
+            btn.innerHTML  = '↩ Undo';
+            btn.style.background = '#fee2e2';
+            btn.style.borderColor = '#f87171';
+            btn.setAttribute('onclick', `undoDislike(${movieId}, event)`);
+        }
+        const likeBtn = card.querySelector('.button-like');
+        if (likeBtn) {
+            likeBtn.classList.remove('is-liked');
+        }
+    }
+
+    window.undoDislike = function(movieId, event) {
+        // 從 cookie 移除
+        let dislikes = getCookieVal('user_dislikes');
+        let arr = dislikes ? dislikes.split(',') : [];
+        arr = arr.filter(id => id !== String(movieId));
+        setCookieVal('user_dislikes', arr.join(','), 365);
+
+        // 恢復 card
+        const btn = event.target.closest('.btn-dislike-movie');
+        const card = btn.closest('.movie-card');
+        if (card) card.style.opacity = '1';
+
+        // 按鈕變回 Dislike
+        if (btn) {
+            // btn.innerHTML = '<span class="fa fa-thumbs-down"> Dislike</span>';
+            // btn.style.background = '';
+            // btn.style.borderColor = '';
+            // btn.setAttribute('onclick', `giveDislike(${movieId}, event)`);
+            btn.classList.remove('is-active-dislike');
+            btn.innerHTML = '<span class="fa fa-thumbs-down"></span> Dislike';
+            btn.setAttribute('onclick', `giveDislike(${movieId}, event)`);
+        }
+    }
+</script>
+<style>
+    :root {
+        --bg-main: #F9F8F6;
+        --bg-soft: #EFE9E3;
+        --bg-card: #ffffff;
+        --border-soft: #D9CFC7;
+        --accent: #C9B59C;
+        --accent-dark: #b09173;
+        --text-main: #3F3A34;
+        --text-muted: #6c645b;
+    }
+
+    body.app-body {
+        background-color: var(--bg-main);
+        color: var(--text-main);
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .hero.is-transparent {
+        background: transparent;
+    }
+
+    .loading-title {
+        color: var(--text-main);
+    }
+
+    /* Top shell / nav */
+    .top-shell {
+        background: linear-gradient(180deg, #f5eee7 0%, #f9f8f6 60%);
+        border-bottom: 1px solid rgba(217, 207, 199, 0.8);
+        margin-bottom: 1rem;
+    }
+
+    .main-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.9rem 0;
+        gap: 1rem;
+    }
+
+    .nav-left {
+        flex: 0 0 auto;
+    }
+
+    .nav-center {
+        flex: 1 1 auto;
+        display: flex;
+        justify-content: center;
+    }
+
+    .nav-link {
+        margin-right: 1rem;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: var(--text-main);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .nav-link:hover {
+        color: var(--accent-strong);
+    }
+
+    .nav-home-link {
+        text-decoration: none;
+    }
+
+    .site-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: var(--text-main);
+    }
+
+    .nav-right {
+        display: flex;
+        align-items: center;
+        flex: 0 0 auto;
+    }
+
+    .button-ghost {
+        background-color: transparent;
+        border-radius: 999px;
+        border: 1px solid rgba(201, 181, 156, 0.45);
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        padding-inline: 0.9rem;
+    }
+
+    .button-ghost:hover {
+        background-color: rgba(239, 233, 227, 0.8);
+        border-color: var(--accent);
+        color: var(--text-main);
+    }
+
+    /* Search bar */
+    .search-wrapper {
+        position: relative;
+        width: 100%;
+        max-width: 460px;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 0.45rem 2.2rem 0.45rem 2.1rem;
+        border-radius: 999px;
+        border: 1px solid rgba(217, 207, 199, 0.9);
+        background-color: #ffffff;
+        font-size: 0.9rem;
+        color: var(--text-main);
+        box-shadow: 0 3px 6px rgba(0,0,0,0.04);
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px rgba(201, 181, 156, 0.6);
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 0.85rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        font-size: 0.85rem;
+    }
+
+    .search-clear-btn {
+        position: absolute;
+        right: 0.7rem;
+        top: 50%;
+        transform: translateY(-50%);
+        border: none;
+        background: none;
+        color: #b7aea4;
+        cursor: pointer;
+        padding: 0;
+        font-size: 0.85rem;
+    }
+
+    .search-clear-btn:hover {
+        color: #8f8377;
+    }
+
+    .search-dropdown {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: calc(100% + 0.4rem);
+        z-index: 120;
+    }
+
+    .search-dropdown-inner {
+        background-color: #ffffff;
+        border-radius: 0.75rem;
+        border: 1px solid var(--border-soft);
+        box-shadow: 0 18px 35px rgba(0,0,0,0.08);
+        padding: 0.35rem 0.35rem 0.4rem;
+        max-height: 420px;
+        overflow-y: auto;
+    }
+
+    .search-result-item {
+        width: 100%;
+        border: none;
+        background: none;
+        display: flex;
+        align-items: center;
+        text-align: left;
+        padding: 0.45rem 0.45rem;
+        border-radius: 0.55rem;
+        cursor: pointer;
+        gap: 0.5rem;
+    }
+
+    .search-result-item:hover {
+        background-color: #faf6f1;
+    }
+
+    .search-cover {
+        height: 48px;
+        width: 32px;
+        border-radius: 0.25rem;
+        object-fit: cover;
+        flex-shrink: 0;
+        border: 1px solid rgba(217, 207, 199, 0.9);
+        background-color: #f3eee8;
+    }
+
+    .search-meta {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .search-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-main);
+        margin-bottom: 0.1rem;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+    }
+
+    .search-sub {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+    }
+
+    .search-arrow {
+        color: #c1b6ab;
+        flex-shrink: 0;
+    }
+
+    .search-status {
+        font-size: 0.82rem;
+        color: var(--text-muted);
+        padding: 0.4rem 0.5rem;
+    }
+
+    /* Sections */
+    .section-block {
+        padding-top: 1.75rem !important;
+        padding-bottom: 1.75rem !important;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .section-header-inline {
+        align-items: center;
+    }
+
+    .section-title {
+        font-size: 1.35rem;
+        font-weight: 600;
+        color: var(--text-main);
+    }
+
+    .section-subtitle {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        margin-top: 0.2rem;
+    }
+
+    .like-row {
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+    }
+
+    /* Cards */
+    .card.movie-card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        background-color: var(--bg-card);
+        border-radius: 0.85rem;
+        border: 1px solid rgba(217, 207, 199, 0.9);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.03);
+        overflow: hidden;
+    }
+
+    .card img {
+        object-fit: cover;
+    }
+
+    .movie-title-text {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-main);
+        line-height: 1.2;
+    }
+
+    .movie-meta-text {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    .movie-card-footer {
+        margin-top: auto;
+        padding: 0.55rem 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid rgba(217, 207, 199, 0.8);
+        background-color: #faf7f3;
+    }
+
+    .rating-footer {
+        padding: 0.55rem 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid rgba(217, 207, 199, 0.8);
+        background-color: #faf7f3;
+
+        gap: 0.35rem;
+        flex-wrap: wrap;
+    }
+
+    .rating-stars {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .not-watched-btn {
+        border-radius: 999px;
+        border-color: rgba(190, 75, 72, 0.6);
+        color: #9b2926;
+        background-color: #fff;
+
+        /* NEW: keep it small and on one line */
+        font-size: 0.75rem;
+        padding: 0.2rem 0.7rem;
+        white-space: nowrap;
+        flex: 0 0 auto;
+    }
+
+    /* Buttons styling */
+    .button-primary,
+    .button.is-link {
+        background-color: var(--accent) !important;
+        border-color: var(--accent) !important;
+        color: #fff !important;
+        border-radius: 999px;
+        font-weight: 500;
+    }
+
+    .button-primary:hover,
+    .button.is-link:hover {
+        background-color: var(--accent-dark) !important;
+        border-color: var(--accent-dark) !important;
+    }
+
+    .button-outline,
+    .button.is-info {
+        background-color: #fff !important;
+        border-radius: 999px;
+        border: 1px solid rgba(201, 181, 156, 0.7) !important;
+        color: var(--text-main) !important;
+        font-weight: 500;
+    }
+
+    .button-outline:hover,
+    .button.is-info:hover {
+        background-color: rgba(239, 233, 227, 0.8) !important;
+        border-color: var(--accent) !important;
+    }
+
+    .not-watched-btn.is-not-watched {
+        background-color: #fbe9e9;
+    }
+
+    .button-like,
+    .button-dislike {
+        border-radius: 999px;
+        font-size: 0.8rem;
+        padding: 0.25rem 0.75rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .button-like {
+        background-color: #ffffff !important;
+        border: 1px solid rgba(201, 181, 156, 0.7) !important;
+        color: var(--text-main) !important;
+    }
+    
+    .button-like .fa-thumbs-up {
+        color: #8b8177;
+    }
+
+    .button-like.is-liked {
+        background-color: #b27a1a !important;  /* strong gold */
+        border-color: #b27a1a !important;
+        color: #ffffff !important;
+    }
+
+    .button-like.is-liked .fa-thumbs-up,
+    .button-like.is-liked .is-liked-icon {
+        color: #ffffff !important;
+    }
+
+    .button-dislike {
+        background-color: #ffffff !important;
+        border: 1px solid #e5b3b0 !important;
+        color: #915d5b !important;
+    }
+
+    .button-dislike .fa-thumbs-down {
+        color: #b06868;
+    }
+
+    .button-dislike:hover {
+        background-color: #fee2e2 !important;
+        border-color: #f87171 !important;
+    }
+
+    .button-dislike.is-active-dislike {
+        background-color: #b91c1c !important;  /* strong red */
+        border-color: #b91c1c !important;
+        color: #ffffff !important;
+    }
+
+    .button-dislike.is-active-dislike .fa-thumbs-down {
+        color: #ffffff !important;
+    }
+
+    /* Default like button (not liked)
+    .button-outline {
+        background-color: #fff !important;
+        border-radius: 999px;
+        border: 1px solid rgba(201, 181, 156, 0.7) !important;
+        color: var(--text-main) !important;
+        font-weight: 500;
+    }
+
+    /* Liked state */
+    .button-outline.is-liked {
+        background-color: #b27a1a !important;  
+        border-color: #b27a1a !important;
+        color: #fff !important;
+    } */
+
+    /* Icon/text when liked */
+    .is-liked-icon {
+        color: #fff !important;
+    }
+
+    /* Optional: default icon color when not liked */
+    .button-outline .fa-thumbs-up {
+        color: #8b8177;
+    }
+
+    .ratings-counter {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+    }
+
+    /* Stars */
+
+    .star {
+        cursor: pointer;
+        color: #d6cec6;
+        font-size: 0.95rem;
+    }
+
+    .star.checked {
+        color: #b27a1a;
+    }
+
+    .rating-modal {
+        max-width: 1000px;
+    }
+
+    .rating-modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .subtitle-text {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+    }
+
+    /* Dropdown */
+    .dropdown.genre-dropdown {
+        position: relative;
+        display: inline-block;
+    }
+
+    .dropdown-btn {
+        background-color: #ffffff;
+        border: 1px solid rgba(217, 207, 199, 0.9);
+        padding: 0.45rem 0.9rem;
+        border-radius: 999px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        color: var(--text-main);
+        box-shadow: 0 3px 6px rgba(0,0,0,0.04);
+    }
+
+    .dropdown-btn:hover {
+        background-color: #f4eee7;
+    }
+
+    .dropdown-content {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: 120%;
+        background-color: #ffffff;
+        min-width: 450px;
+        box-shadow: 0 18px 35px rgba(0,0,0,0.08);
+        border: 1px solid var(--border-soft);
+        border-radius: 0.75rem;
+        padding: 1.2rem 1.2rem 1rem;
+        z-index: 100;
+    }
+
+    .dropdown-content.show {
+        display: block;
+    }
+
+    .dropdown-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 0.9rem;
+        padding-bottom: 0.65rem;
+        border-bottom: 1px solid rgba(217, 207, 199, 0.7);
+    }
+
+    .dropdown-title {
+        font-size: 1.02rem;
+        font-weight: 600;
+        margin: 0;
+        color: var(--text-main);
+    }
+
+    .dropdown-actions button {
+        background: none;
+        border: none;
+        color: var(--accent-dark);
+        cursor: pointer;
+        font-size: 0.8rem;
+        font-weight: 500;
+        margin-left: 0.75rem;
+    }
+
+    .dropdown-actions button:hover {
+        text-decoration: underline;
+    }
+
+    .dropdown-footer {
+        margin-top: 1rem;
+        padding-top: 0.85rem;
+        border-top: 1px solid rgba(217, 207, 199, 0.6);
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .genre-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+    }
+
+    .genre-pill {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid rgba(217, 207, 199, 0.9);
+        border-radius: 9999px;
+        padding: 0.3rem 0.9rem 0.3rem 0.5rem;
+        cursor: pointer;
+        font-size: 0.83rem;
+        color: var(--text-main);
+        background: #ffffff;
+        user-select: none;
+        transition: border-color 0.2s, background-color 0.2s;
+    }
+
+    .genre-pill:hover {
+        border-color: var(--accent);
+        background-color: #faf6f1;
+    }
+
+    .genre-pill input[type="checkbox"] {
+        display: none;
+    }
+
+    .custom-checkbox {
+        width: 17px;
+        height: 17px;
+        border-radius: 50%;
+        border: 1px solid #d1d5db;
+        margin-right: 0.45rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+
+    .genre-pill input[type="checkbox"]:checked + .custom-checkbox {
+        background-color: var(--accent);
+        border-color: var(--accent);
+    }
+
+    .genre-pill input[type="checkbox"]:checked + .custom-checkbox::after {
+        content: '';
+        width: 4px;
+        height: 8px;
+        border: solid white;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+        margin-bottom: 2px;
+    }
+
+    /* Genre modal buttons */
+    .genre-button-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .genre-select-button {
+        border-radius: 999px;
+        border-color: rgba(217, 207, 199, 0.9);
+        background-color: #fff;
+        font-size: 0.85rem;
+        color: var(--text-main);
+    }
+
+    .genre-select-button.is-active-genre {
+        background-color: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+    }
+
+    /* Modal sizing */
+    .modal-content, .modal-card {
+        width: calc(100% - 3.5rem);
+    }
+
+    @media screen and (min-width: 1022px) {
+        .modal-content, .modal-card {
+            width: 1022px;
+        }
+    }
+
+    .modal-card-head {
+        background-color: #f4eee7;
+        border-bottom-color: rgba(217, 207, 199, 0.9);
+    }
+
+    .modal-card-foot {
+        background-color: #f9f6f2;
+        border-top-color: rgba(217, 207, 199, 0.9);
+    }
+
+    /* Footer */
+    .app-footer {
+        background-color: #f4eee7;
+        border-top: 1px solid rgba(217, 207, 199, 0.9);
+        padding-top: 1.2rem;
+        padding-bottom: 1.2rem;
+    }
+
+    .footer-text {
+        color: var(--text-muted);
+        font-size: 0.86rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .footer-logos {
+        display: inline-flex;
+        gap: 1.5rem;
+        align-items: center;
+    }
+
+    .footer-logo {
+        height: 30px;
+    }
+
+    @media (max-width: 768px) {
+        .main-nav {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .nav-center {
+            order: 3;
+            width: 100%;
+        }
+
+        .nav-right {
+            order: 2;
+            justify-content: flex-start;
+            margin-top: 0.25rem;
+        }
+
+        .dropdown-content {
+            min-width: 100%;
+            right: 0;
+        }
+    }
+
+        /* Recommendation reason */
+        .movie-reason {
+            font-size: 0.75rem;
+            color: #6b7280;
+            font-style: italic;
+            margin-top: 6px;
+            line-height: 1.3;
+        }
+        /* Dislike button */
+        .btn-dislike-movie {
+            background: #f9fafb;
+            border: 1px solid #d1d5db;
+            border-radius: 20px;
+            padding: 4px 8px;
+            cursor: pointer;
+        }
+        .btn-dislike-movie:hover {
+            background: #fee2e2;
+            border-color: #f87171;
+        }
+        /* Feedback confirm */
+        .feedback-confirm {
+            font-size: 0.72rem;
+            color: #6b7280;
+            padding: 4px 12px 6px;
+            text-align: center;
+        }
+</style>
+</body>
+</html>

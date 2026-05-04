@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ movie['title'] }} - Movie Details</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <style>
+        :root {
+            --bg-main: #F9F8F6;
+            --bg-soft: #EFE9E3;
+            --bg-card: #ffffff;
+            --border-soft: #D9CFC7;
+            --accent: #C9B59C;
+            --accent-dark: #b09173;
+            --text-main: #3F3A34;
+            --text-muted: #6c645b;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+
+        /* Navbar */
+        .details-nav {
+            background: linear-gradient(180deg, #f5eee7 0%, #f9f8f6 80%);
+            border-bottom: 1px solid rgba(217, 207, 199, 0.9);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.03);
+        }
+
+        .details-nav-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.8rem 0;
+        }
+
+        .details-nav-left {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .details-nav-right {
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-home-link {
+            text-decoration: none;
+        }
+
+        .site-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .nav-link {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text-main);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .nav-link:hover {
+            color: var(--accent-dark);
+        }
+
+        /* Details layout */
+        .section-main {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+        }
+
+        .movie-main-card {
+            background-color: var(--bg-card);
+            border-radius: 1rem;
+            border: 1px solid rgba(217, 207, 199, 0.9);
+            padding: 1.75rem;
+            box-shadow: 0 14px 30px rgba(0,0,0,0.04);
+        }
+
+        .card-image figure.image {
+            border-radius: 0.9rem;
+            overflow: hidden;
+            border: 1px solid rgba(217, 207, 199, 0.9);
+            background-color: #f3eee8;
+        }
+
+        .card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .movie-title {
+            font-size: 2rem;
+            font-weight: 650;
+            margin-bottom: 0.6rem;
+            color: var(--text-main);
+        }
+
+        .tags .tag {
+            border-radius: 999px;
+            background-color: #f4eee7;
+            color: var(--text-main);
+            border: 1px solid rgba(217, 207, 199, 0.9);
+        }
+
+        .movie-overview-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+        }
+
+        .movie-overview-text {
+            line-height: 1.7;
+            font-size: 0.98rem;
+            color: var(--text-main);
+        }
+
+        .detail-actions {
+            margin-top: 1.8rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .button-back {
+            border-radius: 999px;
+            background-color: #fff;
+            border-color: rgba(217, 207, 199, 0.9);
+            color: var(--text-main);
+        }
+
+        .button-back:hover {
+            background-color: #f4eee7;
+            border-color: var(--accent);
+        }
+
+        /* Not liked */
+        .button-like {
+            border-radius: 999px;
+            border: 1px solid rgba(201, 181, 156, 0.7);
+            background-color: #fff;
+            color: var(--text-main);
+            transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        }
+
+        .button-like:hover {
+            background-color: #faf2e7;
+            border-color: var(--accent);
+        }
+
+        /* Liked state – applied by JS via .checked on the icon */
+        .button-like .fa-thumbs-up {
+            color: #8b8177;
+        }
+
+        .button-like .fa-thumbs-up.checked {
+            color: #ffffff;
+        }
+
+        /* When liked, also change button background using a parent selector via JS */
+        .button-like.is-liked {
+            background-color: #b27a1a;
+            border-color: #b27a1a;
+            color: #ffffff;
+        }
+
+        /* Rating section */
+        .ratings-card {
+            background-color: var(--bg-card);
+            border-radius: 1rem;
+            border: 1px solid rgba(217, 207, 199, 0.9);
+            padding: 1.5rem;
+            box-shadow: 0 10px 22px rgba(0,0,0,0.03);
+            margin-top: 0.5rem;
+        }
+
+        .ratings-card h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        #rating-stars {
+            margin-top: 0.5rem;
+        }
+
+        .star {
+            cursor: pointer;
+            color: #d6cec6;
+            font-size: 1.1rem;
+        }
+
+        .star.checked {
+            color: #b27a1a;
+        }
+
+        #current-rating {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* Sequence recommendations */
+        .sequence-section {
+            margin: 2rem auto 2.5rem;
+            padding: 1.6rem 0;
+            border-top: 1px solid rgba(217, 207, 199, 0.7);
+        }
+
+        .sequence-section h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.9rem;
+            color: var(--text-main);
+        }
+
+        .movie-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 18px;
+            margin-top: 10px;
+        }
+
+        .movie-card-link {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .movie-card {
+            background-color: #fff;
+            border-radius: 0.9rem;
+            box-shadow: 0 10px 22px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(217, 207, 199, 0.9);
+        }
+
+        .movie-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.09);
+        }
+
+        .movie-poster {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            border-bottom: 1px solid #eee;
+        }
+
+        .movie-info {
+            padding: 10px 11px 12px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .movie-title {
+            font-size: 0.9rem;
+            margin: 0 0 4px 0;
+            font-weight: 600;
+            line-height: 1.25;
+        }
+
+        .movie-year {
+            font-size: 0.8rem;
+            color: #666;
+            margin: 0;
+        }
+
+        /* Footer */
+        .footer {
+            background-color: #f4eee7;
+            border-top: 1px solid rgba(217, 207, 199, 0.9);
+            padding-top: 1.2rem;
+            padding-bottom: 1.2rem;
+        }
+
+        .footer p {
+            font-size: 0.86rem;
+            color: var(--text-muted);
+        }
+
+        @media (max-width: 1023px) {
+            .movie-main-card {
+                padding: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="details-nav" role="navigation" aria-label="main navigation">
+        <div class="container is-max-widescreen details-nav-inner">
+            <div class="details-nav-left">
+                <a class="nav-home-link" href="/">
+                    <span class="site-title">Movie Recommender</span>
+                </a>
+
+                <a href="/rated" class="nav-link">
+                    <i class="fa fa-star mr-1"></i>
+                    My rated items
+                </a>
+            </div>
+
+            <div class="details-nav-right">
+                <a href="/" class="button button-back-small">
+                    <span class="fa fa-home mr-2"></span>Back to Home
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Movie Details Section -->
+    <section class="section section-main">
+        <div class="container">
+            <div class="movie-main-card">
+                <div class="columns is-variable is-6">
+                    <!-- Left Side: Movie Image -->
+                    <div class="column is-4 card-image">
+                        <figure class="image">
+                            <img src="{{ movie['cover_url'] }}"
+                                 onerror="this.src='https://placehold.co/480x640?text=No+Cover';"
+                                 alt="{{ movie['title'] }}">
+                        </figure>
+                    </div>
+
+                    <!-- Right Side: Details -->
+                    <div class="column is-8">
+                        <h1 class="movie-title">{{ movie['title'] }}</h1>
+
+                        <!-- Genre Labels -->
+                        <div class="tags mb-4">
+                            {% for genre in movie['genres'] %}
+                                <span class="tag is-medium">{{ genre }}</span>
+                            {% endfor %}
+                        </div>
+
+                        <hr>
+
+                        <!-- Overview -->
+                        <h3 class="movie-overview-title mt-3">Overview</h3>
+                        <p class="movie-overview-text">
+                            {{ movie['overview'] }}
+                        </p>
+
+                        <div class="detail-actions">
+                            <button class="button button-back is-medium" onclick="window.history.back()">
+                                <span class="fa fa-arrow-left mr-2"></span> Go back
+                            </button>
+
+                            <button id="like-button" class="button button-like is-medium"
+                                    onclick="updateLike({{movie['movieId']}})">
+                                <span id="like-icon" class="fa fa-thumbs-up"> Like</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ratings block -->
+            <div class="ratings-card mt-5">
+                <div class="ratings">
+                    <h3 class="title is-5 mb-2">Rate this movie</h3>
+                    <div id="rating-stars">
+                        <span class="fa fa-star px-1 star" data-rate="1" onclick="setRating(1)"></span>
+                        <span class="fa fa-star px-1 star" data-rate="2" onclick="setRating(2)"></span>
+                        <span class="fa fa-star px-1 star" data-rate="3" onclick="setRating(3)"></span>
+                        <span class="fa fa-star px-1 star" data-rate="4" onclick="setRating(4)"></span>
+                        <span class="fa fa-star px-1 star" data-rate="5" onclick="setRating(5)"></span>
+                    </div>
+                    <p id="current-rating" class="mt-2"></p>
+                </div>
+            </div>
+
+            <!-- Sequential recommendations -->
+            <div class="sequence-section">
+                <h3>Users also watch this after watching {{ movie['title'] }}...</h3>
+                
+                <div class="movie-grid">
+                    {% if sequence_movies %}
+                        {% for movie in sequence_movies %}
+                        <a href="/movie/{{ movie.movieId }}" class="movie-card-link">
+                            <div class="movie-card">
+                                <img src="{{ movie.cover_url }}" 
+                                     alt="{{ movie.title }}" 
+                                     class="movie-poster" 
+                                     onerror="this.onerror=null; this.src='https://placehold.co/200x300?text=No+Cover'">
+                                
+                                <div class="movie-info">
+                            <h4 class="movie-title">{{ movie.title }}</h4>
+                            <p class="movie-year">{{ movie.year }}</p>
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    {% else %}
+                        <p>No sequence data available for this movie yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer app-footer mt-6">
+        <div class="container is-max-widescreen">
+            <div class="content has-text-centered">
+                <p class="footer-text">
+                    COMP4135 Group Project © 2026
+                </p>
+                
+            </div>
+        </div>
+    </footer>
+
+<script>
+function getCookie(name) {
+    const v = document.cookie.split('; ').find(row => row.startsWith(name + '='));
+    if (!v) return '';
+    return decodeURIComponent(v.split('=')[1]);
+}
+
+function setCookie(name, value, days) {
+    let cookie = name + '=' + encodeURIComponent(value) + '; path=/';
+    if (days) {
+        const d = new Date();
+        d.setTime(d.getTime() + (days*24*60*60*1000));
+        cookie += '; Expires=' + d.toUTCString();
+    }
+    document.cookie = cookie;
+}
+
+function getUserLikes() {
+    const c = getCookie('user_likes');
+    if (!c) return [];
+    if (c === '') return [];
+    return c.split(',').filter(s => s !== '');
+}
+
+function inLikes(movieId) {
+    return getUserLikes().includes(movieId.toString());
+}
+
+function updateLike(movieId) {
+    const likes = getUserLikes();
+    const mid = movieId.toString();
+    const idx = likes.indexOf(mid);
+    if (idx > -1) likes.splice(idx, 1);
+    else likes.push(mid);
+    setCookie('user_likes', likes.join(','));
+    location.reload();
+}
+
+// Rating functions
+function getUserRates() {
+    const c = getCookie('user_rates');
+    if (!c || c === '') return [];
+    return c.split(',');
+}
+
+function getCurrentRating(movieId) {
+    const rates = getUserRates();
+    for (let record of rates) {
+        let parts = record.split('|');
+        if (parts.length >= 3 && parseInt(parts[1]) === movieId) {
+            return parseInt(parts[2]);
+        }
+    }
+    return 0;
+}
+
+function setRating(rate) {
+    const movieId = {{movie['movieId']}};
+    const rates = getUserRates();
+    const record = '611|' + movieId + '|' + rate + '|0';
+    
+    // Remove existing rating for this movie
+    const newRates = rates.filter(r => {
+        let parts = r.split('|');
+        return !(parts.length >= 3 && parseInt(parts[1]) === movieId);
+    });
+    
+    // Add new rating
+    newRates.push(record);
+    setCookie('user_rates', newRates.join(','));
+    
+    // Update UI
+    updateStarDisplay(rate);
+    document.getElementById('current-rating').textContent = `Rated: ${rate}/5 stars`;
+}
+
+function updateStarDisplay(currentRate) {
+    const stars = document.querySelectorAll('#rating-stars .star');
+    stars.forEach((star, index) => {
+        if (index < currentRate) {
+            star.classList.add('checked');
+        } else {
+            star.classList.remove('checked');
+        }
+    });
+}
+
+// Initialize rating and like display on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const movieId = {{movie['movieId']}};
+    
+    // Initialize like button
+    const icon = document.getElementById('like-icon');
+    const likeBtn = document.getElementById('like-button');
+    if (icon && inLikes(movieId)) {
+        icon.classList.add('checked');
+        if (likeBtn) likeBtn.classList.add('is-liked');
+    }
+    
+    // Initialize rating stars
+    const currentRating = getCurrentRating(movieId);
+    if (currentRating > 0) {
+        updateStarDisplay(currentRating);
+        document.getElementById('current-rating').textContent = `Rated: ${currentRating}/5 stars`;
+    }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My rated items</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <style>
+        :root {
+            --bg-main: #F9F8F6;
+            --bg-soft: #EFE9E3;
+            --bg-card: #ffffff;
+            --border-soft: #D9CFC7;
+            --accent: #C9B59C;
+            --accent-dark: #b09173;
+            --text-main: #3F3A34;
+            --text-muted: #6c645b;
+        }
+
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+        }
+
+        .top-shell {
+            background-color: var(--bg-soft);
+            border-bottom: 1px solid var(--border-soft);
+        }
+
+        .container {
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 0 1.25rem;
+        }
+
+        .details-nav {
+            background: linear-gradient(180deg, #f5eee7 0%, #f9f8f6 80%);
+            border-bottom: 1px solid rgba(217, 207, 199, 0.9);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.03);
+        }
+
+        .details-nav-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.8rem 0;
+        }
+
+        .details-nav-left {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .details-nav-right {
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-home-link {
+            text-decoration: none;
+        }
+
+        .site-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .nav-link {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text-main);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .nav-link:hover {
+            color: var(--accent-dark);
+        }
+
+        .button-back {
+            border-radius: 999px;
+            background-color: #fff;
+            border-color: rgba(217, 207, 199, 0.9);
+            color: var(--text-main);
+        }
+
+        .button-back:hover {
+            background-color: #f4eee7;
+            border-color: var(--accent);
+        }
+
+        .page-shell {
+            padding: 1.75rem 0 2.5rem;
+        }
+
+        h1.page-title {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .page-subtitle {
+            font-size: 0.95rem;
+            color: #776c63;
+            margin-bottom: 1.5rem;
+        }
+
+        .rated-list {
+            background-color: var(--bg-card);
+            border-radius: 14px;
+            border: 1px solid var(--border-soft);
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.04);
+            padding: 0.75rem 0;
+        }
+
+        .rated-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.65rem 1.0rem;
+            border-bottom: 1px solid rgba(230, 221, 212, 0.8);
+        }
+
+        .rated-item:last-child {
+            border-bottom: none;
+        }
+
+        .rated-title {
+            font-size: 0.98rem;
+            font-weight: 500;
+            color: var(--text-main);
+            text-decoration: none;
+        }
+
+        .rated-title:hover {
+            text-decoration: underline;
+        }
+
+        .rated-meta {
+            font-size: 0.8rem;
+            color: #8a7e72;
+        }
+
+        .rated-right {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .star {
+            color: #d6cec6;      /* base */
+            font-size: 1rem;
+        }
+
+        .star.checked {
+            color: #b27a1a;      /* strong gold */
+        }
+
+        .empty-text {
+            padding: 1.25rem 1rem;
+            font-size: 0.95rem;
+            color: #8a7e72;
+        }
+        /* Footer */
+        .footer {
+            background-color: #f4eee7;
+            border-top: 1px solid rgba(217, 207, 199, 0.9);
+            padding-top: 1.2rem;
+            padding-bottom: 1.2rem;
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+        }
+
+        .footer p {
+            font-size: 0.86rem;
+            color: var(--text-muted);
+        }
+
+    </style>
+</head>
+<body>
+<!-- Navbar -->
+<nav class="details-nav" role="navigation" aria-label="main navigation">
+    <div class="container is-max-widescreen details-nav-inner">
+        <div class="details-nav-left">
+            <a class="nav-home-link" href="/">
+                <span class="site-title">Movie Recommender</span>
+            </a>
+
+            <a href="/rated" class="nav-link">
+                <i class="fa fa-star mr-1"></i>
+                My rated items
+            </a>
+        </div>
+
+        <div class="details-nav-right">
+            <a href="/" class="button button-back">
+                <span class="fa fa-home mr-2"></span>Back to Home
+            </a>
+        </div>
+    </div>
+</nav>
+
+<main class="page-shell">
+    <div class="container">
+        <h1 class="page-title">My rated items</h1>
+        <p class="page-subtitle">
+            Movies you’ve rated so far. Click a title to open its detail page.
+        </p>
+
+        <div class="rated-list">
+            {% if rated_movies and rated_movies|length > 0 %}
+                {% for movie in rated_movies %}
+                    <div class="rated-item">
+                        <div>
+                            <a href="{{ url_for('main.movie_details', movieId=movie.movieId) }}" class="rated-title">
+                                {{ movie.title }}
+                            </a>
+                            <div class="rated-meta">
+                                {% if movie.year %}{{ movie.year }} · {% endif %}
+                                Your rating:
+                                {{ movie.rating }}/5
+                            </div>
+                        </div>
+
+                        <div class="rated-right" aria-label="Your rating">
+                            {% for i in range(1, 6) %}
+                                <span class="fa fa-star star {% if movie.rating >= i %}checked{% endif %}"></span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-text">
+                    You haven’t rated any movies yet. Go back to the home page and start rating to see them here.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+     <footer class="footer app-footer mt-6">
+        <div class="container is-max-widescreen">
+            <div class="content has-text-centered">
+                <p class="footer-text">
+                    COMP4135 Group Project © 2026
+                </p>
+            </div>
+        </div>
+    </footer>
+</main>
+</body>
+</html>
