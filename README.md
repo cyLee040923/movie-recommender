@@ -33,7 +33,6 @@ flask --app flaskr run
 
 ## UI images
 
-Store screenshots in `flaskr/static/img/`. GitHub READMEs do not render Jinja (`url_for`), so use repository-relative paths in Markdown.
 
 Example (repository-relative Markdown links):
 
@@ -51,8 +50,6 @@ Example (repository-relative Markdown links):
 
 ![Rated page](flaskr/static/img/rated-page.png)
 
-Notes:
-- Filenames are case-sensitive on GitHub. Make sure the filename in the link exactly matches the file in `flaskr/static/img/`.
-- When you want the image to appear inside a Flask template served at runtime, keep using `{{ url_for('static', filename='img/NAME.png') }}` there — but not in the README.
+
 
 
