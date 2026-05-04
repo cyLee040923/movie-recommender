@@ -33,7 +33,7 @@ flask --app flaskr run
 
 ## UI images 
 
-```jinja
+
 <section class="section">
 	<div class="container">
 		<h2 class="title is-4">App UI</h2>
@@ -79,4 +79,4 @@ flask --app flaskr run
 		</figure>
 	</div>
 </section>
-```
+
