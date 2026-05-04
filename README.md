@@ -31,46 +31,28 @@ flask --app flaskr run
 
 4. Open http://127.0.0.1:5000 in your browser.
 
-## UI images 
+## UI images
 
+Store screenshots in `flaskr/static/img/`. GitHub READMEs do not render Jinja (`url_for`), so use repository-relative paths in Markdown.
 
-<section class="section">
-	<div>
-		<h2 class="title is-4">App UI</h2>
-        <h3>UI Imagese<h3>
-		<figure>
-			<img src="{{ url_for('static', filename='/static/img/select-genre.png') }}" alt="select genre img">
-		</figure>
-		<h3>Rate movies<h3>
-		<figure>
-			<img src="{{ url_for('static', filename='/static/img/ratings.png') }}" 
-            alt="Rate movies img">
-		</figure>
-        <h3>Home Page<h3>
-		<figure>
-			<img src="{{ url_for('static', filename='/static/img/home-page.png') }}" 
-            alt="Home page img">
-		</figure>
-        <h3>Because you like<h3>
-		<figure>
-			<img src="{{ url_for('static', filename='/static/img/Because-you-like.png') }}" 
-            alt="Because-you-like img">
-		</figure>
-        <h3>Details Page<h3>
-		<figure>
-			<img src="{{ url_for('static', filename='/static/img/details-page.png') }}" 
-            alt="Details page img">
-		</figure>
-        <h3>Sequential Recommendation<h3>
-		<figure>
-			<img src="{{ url_for('static', filename='/static/img/sequential-recommendation.png') }}" 
-            alt="Sequential recommendation img">
-		</figure>
-        <h3>Rated Page<h3>
-		<figure>
-			<img src="{{ url_for('static', filename='/flaskr/static/img/rated-page.png') }}" 
-            alt="Rated page img">
-		</figure>
-	</div>
-</section>
+Example (repository-relative Markdown links):
+
+![Select genre](flaskr/static/img/select-genre.png)
+
+![Rate movies](flaskr/static/img/ratings.png)
+
+![Home page](flaskr/static/img/home-page.png)
+
+![Because you like](flaskr/static/img/Because-you-like.png)
+
+![Details page](flaskr/static/img/details-page.png)
+
+![Sequential recommendations](flaskr/static/img/sequential-recommendations.png)
+
+![Rated page](flaskr/static/img/rated-page.png)
+
+Notes:
+- Filenames are case-sensitive on GitHub. Make sure the filename in the link exactly matches the file in `flaskr/static/img/`.
+- When you want the image to appear inside a Flask template served at runtime, keep using `{{ url_for('static', filename='img/NAME.png') }}` there — but not in the README.
+
 
