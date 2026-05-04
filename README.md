@@ -35,43 +35,37 @@ flask --app flaskr run
 
 
 <section class="section">
-	<div class="container">
+	<div>
 		<h2 class="title is-4">App UI</h2>
-        <h3>Select genre<h3>
+        <h3>UI Imagese<h3>
 		<figure>
 			<img src="{{ url_for('static', filename='img/select-genre.png') }}" alt="select genre img">
 		</figure>
-
-        <h3>Rate movies<h3>
+		<h3>Rate movies<h3>
 		<figure>
 			<img src="{{ url_for('static', filename='img/ratings.png') }}" 
             alt="Rate movies img">
 		</figure>
-
         <h3>Home Page<h3>
 		<figure>
 			<img src="{{ url_for('static', filename='img/home-page.png') }}" 
             alt="Home page img">
 		</figure>
-
         <h3>Because you like<h3>
 		<figure>
 			<img src="{{ url_for('static', filename='img/Because-you-like.png') }}" 
             alt="Because-you-like img">
 		</figure>
-
         <h3>Details Page<h3>
 		<figure>
 			<img src="{{ url_for('static', filename='img/details-page.png') }}" 
             alt="Details page img">
 		</figure>
-
         <h3>Sequential Recommendation<h3>
 		<figure>
 			<img src="{{ url_for('static', filename='img/sequential-recommendation.png') }}" 
             alt="Sequential recommendation img">
 		</figure>
-
         <h3>Rated Page<h3>
 		<figure>
 			<img src="{{ url_for('static', filename='img/rated-page.png') }}" 
